@@ -28,6 +28,6 @@ export function normalizeValue(
 ): number {
   if (!Number.isFinite(value) || !Number.isFinite(min) || !Number.isFinite(max)) return 0;
   if (range <= 0) return 0;
-  const lowerBound = Math.max(min, max - range);
+  const lowerBound = Math.min(min, max - range);
   return clamp((value - lowerBound) / range, 0, 1);
 }

@@ -1,12 +1,14 @@
 import { Toolbar } from "./Toolbar";
 import { ViewContainer } from "./ViewContainer";
 import { useDatasetStore } from "../../store";
+import { View2dOptions } from "../../views";
 
 export function AppShell() {
   const dataset = useDatasetStore((state) => state.dataset);
   const filePath = useDatasetStore((state) => state.filePath);
   const isDirty = useDatasetStore((state) => state.isDirty);
   const selectedBandIndex = useDatasetStore((state) => state.selectedBandIndex);
+  const viewMode = useDatasetStore((state) => state.viewMode);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -31,7 +33,11 @@ export function AppShell() {
           <ViewContainer />
           <aside className="flex h-full flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
             <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Options</div>
-            <p className="text-sm text-slate-300">View-specific controls will live here.</p>
+            {dataset && viewMode === "2d" ? (
+              <View2dOptions />
+            ) : (
+              <p className="text-sm text-slate-300">View-specific controls will live here.</p>
+            )}
             <div className="mt-auto text-xs text-slate-500">
               {dataset ? "Dataset active" : "Load a dataset to unlock options."}
             </div>

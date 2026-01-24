@@ -75,7 +75,12 @@ export function View2dOptions() {
                 value={maxDb ?? ""}
                 onChange={(event) => {
                   const value = event.target.value;
-                  setMaxDb(value === "" ? null : Number(value));
+                  if (value === "") {
+                    setMaxDb(null);
+                    return;
+                  }
+                  const parsed = Number(value);
+                  setMaxDb(Number.isFinite(parsed) ? parsed : null);
                 }}
                 className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
               />

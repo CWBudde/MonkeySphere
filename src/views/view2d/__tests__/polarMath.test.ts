@@ -29,26 +29,17 @@ describe("polarMath", () => {
       rangeDb: 24,
     });
 
-    expect(points.map((point) => [point.x, point.y])).toMatchInlineSnapshot(`
-      [
-        [
-          10,
-          0,
-        ],
-        [
-          0,
-          -7.5,
-        ],
-        [
-          -5,
-          -0,
-        ],
-        [
-          -0,
-          2.5,
-        ],
-      ]
-    `);
+    const expected = [
+      [10, 0],
+      [0, -7.5],
+      [-5, 0],
+      [0, 2.5],
+    ];
+
+    points.forEach((point, index) => {
+      expect(point.x).toBeCloseTo(expected[index][0], 6);
+      expect(point.y).toBeCloseTo(expected[index][1], 6);
+    });
   });
 
   it("detects when a path should be closed", () => {

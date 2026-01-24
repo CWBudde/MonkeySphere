@@ -87,7 +87,10 @@ export function PolarPlot({ dataset, bandIndex }: PolarPlotProps) {
 
     ctx.clearRect(0, 0, layout.width, layout.height);
 
-    const maxDb = maxDbOverride ?? computeMaximum(dataset, bandIndex);
+    const maxDb =
+      Number.isFinite(maxDbOverride) && maxDbOverride !== null
+        ? maxDbOverride
+        : computeMaximum(dataset, bandIndex);
     const minDb = computeMinimum(dataset, bandIndex);
 
     drawPolarGrid(ctx, layout, {
@@ -165,9 +168,8 @@ function drawPolarGrid(
   ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
   ctx.lineWidth = 1;
 
-  const ringCount = Math.max(1, Math.floor(rangeDb / GRID_DB_STEP));
-  for (let ringIndex = 0; ringIndex <= ringCount; ringIndex++) {
-    const dbValue = maxDb - ringIndex * GRID_DB_STEP;
+  for (let dbOffset = 0; dbOffset <= rangeDb + 0.001; dbOffset += GRID_DB_STEP) {
+    const dbValue = maxDb - dbOffset;
     const normalized = normalizeValue(dbValue, minDb, maxDb, rangeDb);
     const ringRadius = normalized * layout.radius;
     ctx.beginPath();
@@ -231,6 +233,8 @@ function drawSlice(
   ctx.translate(layout.centerX, layout.centerY);
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.beginPath();
 
   drawSlicePath(ctx, points, shouldClosePath(axis));
