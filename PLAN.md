@@ -85,31 +85,31 @@ Implement the RIFF chunk reader/writer needed for `.mob` files.
 
 ### 2.1 RIFF Reader
 
-- [ ] Create `src/codecs/riff/riffReader.ts`
-- [ ] Define `RiffChunk` interface: `{ id: string; size: number; data: ArrayBuffer }`
-- [ ] Implement `readRiffFile(buffer: ArrayBuffer): RiffFile`
-  - [ ] Parse RIFF header (4-byte "RIFF", 4-byte size, 4-byte form type)
-  - [ ] Validate form type is "MOBA"
-  - [ ] Parse chunk list iteratively
-  - [ ] Handle chunk padding (RIFF chunks are word-aligned)
-- [ ] Implement `getChunk(file: RiffFile, chunkId: string): RiffChunk | undefined`
-- [ ] Implement `getAllChunks(file: RiffFile): RiffChunk[]`
+- [x] Create `src/codecs/riff/riffReader.ts`
+- [x] Define `RiffChunk` interface: `{ id: string; size: number; data: ArrayBuffer }`
+- [x] Implement `readRiffFile(buffer: ArrayBuffer): RiffFile`
+  - [x] Parse RIFF header (4-byte "RIFF", 4-byte size, 4-byte form type)
+  - [x] Validate form type is "MOBA"
+  - [x] Parse chunk list iteratively
+  - [x] Handle chunk padding (RIFF chunks are word-aligned)
+- [x] Implement `getChunk(file: RiffFile, chunkId: string): RiffChunk | undefined`
+- [x] Implement `getAllChunks(file: RiffFile): RiffChunk[]`
 
 ### 2.2 RIFF Writer
 
-- [ ] Create `src/codecs/riff/riffWriter.ts`
-- [ ] Implement `createRiffFile(formType: string, chunks: RiffChunk[]): ArrayBuffer`
-  - [ ] Write RIFF header
-  - [ ] Write each chunk with proper padding
-  - [ ] Calculate and write total size
+- [x] Create `src/codecs/riff/riffWriter.ts`
+- [x] Implement `createRiffFile(formType: string, chunks: RiffChunk[]): ArrayBuffer`
+  - [x] Write RIFF header
+  - [x] Write each chunk with proper padding
+  - [x] Calculate and write total size
 
 ### 2.3 Unit Tests for RIFF
 
-- [ ] Create `src/codecs/riff/__tests__/riff.test.ts`
-- [ ] Test round-trip: write → read → compare
-- [ ] Test with multiple chunks
-- [ ] Test chunk padding behavior
-- [ ] Test error handling for malformed files
+- [x] Create `src/codecs/riff/__tests__/riff.test.ts`
+- [x] Test round-trip: write → read → compare
+- [x] Test with multiple chunks
+- [x] Test chunk padding behavior
+- [x] Test error handling for malformed files
 
 ---
 
@@ -119,53 +119,53 @@ Implement the native `.mob` file format parser and writer.
 
 ### 3.1 MOB Header Parsing
 
-- [ ] Create `src/codecs/mob/mobTypes.ts`
-- [ ] Define `MobHeader` interface matching `TMoBHeader` from legacy
-  - [ ] Version fields
-  - [ ] Azimuth axis (start, step, values)
-  - [ ] Polar axis (start, step, values)
-  - [ ] Frequency definition (start, step, bands)
-  - [ ] Sphere mode
-- [ ] Create `src/codecs/mob/mobRead.ts`
-- [ ] Implement `parseMobHeader(data: DataView): MobHeader`
-  - [ ] Read all header fields with correct byte offsets
-  - [ ] Handle endianness (little-endian)
+- [x] Create `src/codecs/mob/mobTypes.ts`
+- [x] Define `MobHeader` interface matching `TMoBHeader` from legacy
+  - [x] Version fields
+  - [x] Azimuth axis (start, step, values)
+  - [x] Polar axis (start, step, values)
+  - [x] Frequency definition (start, step, bands)
+  - [x] Sphere mode
+- [x] Create `src/codecs/mob/mobRead.ts`
+- [x] Implement `parseMobHeader(data: DataView): MobHeader`
+  - [x] Read all header fields with correct byte offsets
+  - [x] Handle endianness (little-endian)
 
 ### 3.2 MOB Data Chunks
 
-- [ ] Implement `parsePlevChunk(chunk: ArrayBuffer, header: MobHeader): Float32Array`
-  - [ ] Read polar level grid as 32-bit floats
-  - [ ] Validate size matches expected sample count
-- [ ] Implement `parseClfChunk(chunk: ArrayBuffer): DatasetMeta`
-  - [ ] Extract metadata strings (name, manufacturer, notes)
-- [ ] Implement `parseSpecChunk(chunk: ArrayBuffer): SpectrumData`
-  - [ ] Parse spectrum/impulse data (post-MVP, stub initially)
-- [ ] Implement `parseCommChunk(chunk: ArrayBuffer): string` (comment)
+- [x] Implement `parsePlevChunk(chunk: ArrayBuffer, header: MobHeader): Float32Array`
+  - [x] Read polar level grid as 32-bit floats
+  - [x] Validate size matches expected sample count
+- [x] Implement `parseClfChunk(chunk: ArrayBuffer): DatasetMeta`
+  - [x] Extract metadata strings (name, manufacturer, notes)
+- [x] Implement `parseSpecChunk(chunk: ArrayBuffer): SpectrumData`
+  - [x] Parse spectrum/impulse data (post-MVP, stub initially)
+- [x] Implement `parseCommChunk(chunk: ArrayBuffer): string` (comment)
 
 ### 3.3 MOB File Reader
 
-- [ ] Implement `readMobFile(buffer: ArrayBuffer): Dataset`
-  - [ ] Use RIFF reader to extract chunks
-  - [ ] Parse header from MOBA chunk
-  - [ ] Parse `plev` chunk for sample data
-  - [ ] Parse optional chunks (`clf_`, `spec`, `comm`)
-  - [ ] Construct and return `Dataset`
+- [x] Implement `readMobFile(buffer: ArrayBuffer): Dataset`
+  - [x] Use RIFF reader to extract chunks
+  - [x] Parse header from MOBA chunk
+  - [x] Parse `plev` chunk for sample data
+  - [x] Parse optional chunks (`clf_`, `spec`, `comm`)
+  - [x] Construct and return `Dataset`
 
 ### 3.4 MOB File Writer
 
-- [ ] Create `src/codecs/mob/mobWrite.ts`
-- [ ] Implement `writeMobHeader(header: MobHeader): ArrayBuffer`
-- [ ] Implement `writePlevChunk(samples: Float32Array): ArrayBuffer`
-- [ ] Implement `writeClfChunk(meta: DatasetMeta): ArrayBuffer`
-- [ ] Implement `writeMobFile(dataset: Dataset): ArrayBuffer`
-  - [ ] Construct all chunks
-  - [ ] Use RIFF writer to create file
+- [x] Create `src/codecs/mob/mobWrite.ts`
+- [x] Implement `writeMobHeader(header: MobHeader): ArrayBuffer`
+- [x] Implement `writePlevChunk(samples: Float32Array): ArrayBuffer`
+- [x] Implement `writeClfChunk(meta: DatasetMeta): ArrayBuffer`
+- [x] Implement `writeMobFile(dataset: Dataset): ArrayBuffer`
+  - [x] Construct all chunks
+  - [x] Use RIFF writer to create file
 
 ### 3.5 Unit Tests for MOB Codec
 
-- [ ] Create `src/codecs/mob/__tests__/mob.test.ts`
-- [ ] Test header parsing with known byte sequences
-- [ ] Test round-trip: create dataset → write → read → compare
+- [x] Create `src/codecs/mob/__tests__/mob.test.ts`
+- [x] Test header parsing with known byte sequences
+- [x] Test round-trip: create dataset → write → read → compare
 - [ ] Test with real `.mob` fixture files from legacy app
 - [ ] Test optional chunk handling (missing vs present)
 
