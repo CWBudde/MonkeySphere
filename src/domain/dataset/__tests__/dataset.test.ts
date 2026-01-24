@@ -13,11 +13,7 @@ import type { Dataset } from "../types";
  * Create a test dataset with predictable values.
  * Value at (az, pol, band) = az * 1000 + pol * 10 + band
  */
-function createTestDataset(
-  azCount: number,
-  polCount: number,
-  bandCount: number,
-): Dataset {
+function createTestDataset(azCount: number, polCount: number, bandCount: number): Dataset {
   const samples = new Float32Array(azCount * polCount * bandCount);
   let idx = 0;
   for (let az = 0; az < azCount; az++) {

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "bun:test";
-import { readRiffFile, getChunk, RiffError } from "../riffReader";
+import { describe, it, expect } from "vitest";
+import { readRiffFile, getChunk, RiffError } from "./riffReader";
 
 describe("RIFF Reader", () => {
   // Helper to create a RIFF buffer manually

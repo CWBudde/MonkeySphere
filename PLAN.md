@@ -177,52 +177,52 @@ Set up global state management and file open/save workflows.
 
 ### 4.1 State Management Setup
 
-- [ ] Install zustand: `bun add zustand`
-- [ ] Create `src/store/datasetStore.ts`
-- [ ] Define store interface:
-  - [ ] `dataset: Dataset | null`
-  - [ ] `filePath: string | null`
-  - [ ] `isDirty: boolean`
-  - [ ] `selectedBandIndex: number`
-  - [ ] `viewMode: '3d' | '2d' | 'coverage' | 'iso'`
-- [ ] Implement actions:
-  - [ ] `loadDataset(dataset: Dataset, path?: string)`
-  - [ ] `closeDataset()`
-  - [ ] `setSelectedBand(index: number)`
-  - [ ] `setViewMode(mode: ViewMode)`
-  - [ ] `markDirty()` / `markClean()`
+- [x] Install zustand: `bun add zustand`
+- [x] Create `src/store/datasetStore.ts`
+- [x] Define store interface:
+  - [x] `dataset: Dataset | null`
+  - [x] `filePath: string | null`
+  - [x] `isDirty: boolean`
+  - [x] `selectedBandIndex: number`
+  - [x] `viewMode: '3d' | '2d' | 'coverage' | 'iso'`
+- [x] Implement actions:
+  - [x] `loadDataset(dataset: Dataset, path?: string)`
+  - [x] `closeDataset()`
+  - [x] `setSelectedBand(index: number)`
+  - [x] `setViewMode(mode: ViewMode)`
+  - [x] `markDirty()` / `markClean()`
 
 ### 4.2 File Open Workflow
 
-- [ ] Create `src/features/fileOpen/fileOpen.ts`
-- [ ] Implement `openFile(): Promise<Dataset | null>`
-  - [ ] Use File System Access API or `<input type="file">`
-  - [ ] Detect format by extension
-  - [ ] Call appropriate codec
-  - [ ] Return parsed dataset
-- [ ] Create `src/features/fileOpen/FileOpenButton.tsx`
-  - [ ] Trigger file picker on click
-  - [ ] Show loading state during parse
-  - [ ] Update store on success
-  - [ ] Show error toast on failure
+- [x] Create `src/features/fileOpen/fileOpen.ts`
+- [x] Implement `openFile(): Promise<Dataset | null>`
+  - [x] Use File System Access API or `<input type="file">`
+  - [x] Detect format by extension
+  - [x] Call appropriate codec
+  - [x] Return parsed dataset
+- [x] Create `src/features/fileOpen/FileOpenButton.tsx`
+  - [x] Trigger file picker on click
+  - [x] Show loading state during parse
+  - [x] Update store on success
+  - [x] Show error toast on failure
 
 ### 4.3 File Save Workflow
 
-- [ ] Create `src/features/fileSave/fileSave.ts`
-- [ ] Implement `saveFile(dataset: Dataset, format: string): Promise<void>`
-  - [ ] Serialize using appropriate codec
-  - [ ] Trigger download or use File System Access API
-- [ ] Create `src/features/fileSave/FileSaveButton.tsx`
+- [x] Create `src/features/fileSave/fileSave.ts`
+- [x] Implement `saveFile(dataset: Dataset, format: string): Promise<void>`
+  - [x] Serialize using appropriate codec
+  - [x] Trigger download or use File System Access API
+- [x] Create `src/features/fileSave/FileSaveButton.tsx`
   - [ ] Save As dialog with format selection
   - [ ] Quick Save if path known
 
 ### 4.4 MRU (Most Recently Used) List
 
-- [ ] Create `src/storage/mru.ts`
-- [ ] Implement `getMruList(): string[]`
-- [ ] Implement `addToMru(filename: string)`
-- [ ] Implement `clearMru()`
-- [ ] Store in localStorage (names only, not paths)
+- [x] Create `src/storage/mru.ts`
+- [x] Implement `getMruList(): string[]`
+- [x] Implement `addToMru(filename: string)`
+- [x] Implement `clearMru()`
+- [x] Store in localStorage (names only, not paths)
 
 ---
 
@@ -232,37 +232,37 @@ Build the main application layout and view switching.
 
 ### 5.1 App Layout
 
-- [ ] Create `src/app/shell/AppShell.tsx`
-  - [ ] Header with app title and file info
-  - [ ] Toolbar row for primary actions
-  - [ ] Main content area (view container)
-  - [ ] Optional sidebar for options panel
-  - [ ] Status bar (band info, file status)
+- [x] Create `src/app/shell/AppShell.tsx`
+  - [x] Header with app title and file info
+  - [x] Toolbar row for primary actions
+  - [x] Main content area (view container)
+  - [x] Optional sidebar for options panel
+  - [x] Status bar (band info, file status)
 
 ### 5.2 Toolbar
 
-- [ ] Create `src/app/shell/Toolbar.tsx`
-- [ ] Add Open button (connected to file open)
-- [ ] Add Save/Save As buttons
-- [ ] Add Export PNG button (placeholder)
-- [ ] Add view mode toggle buttons: 3D / 2D / Coverage / ISO
-- [ ] Add band selector dropdown
-  - [ ] List all bands with frequency labels
-  - [ ] Show "No data" when no dataset loaded
+- [x] Create `src/app/shell/Toolbar.tsx`
+- [x] Add Open button (connected to file open)
+- [x] Add Save/Save As buttons
+- [x] Add Export PNG button (placeholder)
+- [x] Add view mode toggle buttons: 3D / 2D / Coverage / ISO
+- [x] Add band selector dropdown
+  - [x] List all bands with frequency labels
+  - [x] Show "No data" when no dataset loaded
 
 ### 5.3 View Container
 
-- [ ] Create `src/app/shell/ViewContainer.tsx`
-- [ ] Render correct view component based on `viewMode`
-- [ ] Show placeholder when no dataset loaded
+- [x] Create `src/app/shell/ViewContainer.tsx`
+- [x] Render correct view component based on `viewMode`
+- [x] Show placeholder when no dataset loaded
 - [ ] Handle view transitions
 
 ### 5.4 Band Selector Logic
 
-- [ ] Create `src/domain/terz.ts`
-- [ ] Implement `terzFrequency(index: number): number` (third-octave center frequencies)
-- [ ] Implement `formatFrequency(hz: number): string` (e.g., "1 kHz", "250 Hz")
-- [ ] Implement `getBandLabel(dataset: Dataset, bandIndex: number): string`
+- [x] Create `src/domain/terz.ts`
+- [x] Implement `terzFrequency(index: number): number` (third-octave center frequencies)
+- [x] Implement `formatFrequency(hz: number): string` (e.g., "1 kHz", "250 Hz")
+- [x] Implement `getBandLabel(dataset: Dataset, bandIndex: number): string`
 
 ---
 

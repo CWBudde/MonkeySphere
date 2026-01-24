@@ -1,5 +1,5 @@
-import { Shell } from "./shell/Shell";
+import { AppShell } from "./shell/AppShell";
 
 export function App() {
-  return <Shell />;
+  return <AppShell />;
 }

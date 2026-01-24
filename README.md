@@ -1,6 +1,8 @@
 # MonkeySphere Web
 
-MonkeySphere Web is a browser-based loudspeaker directivity and polar-data analysis tool. It replaces the legacy Delphi application with a modern React + TypeScript stack while preserving the original workflows: loading polar datasets, visualizing them in 3D/2D/ISO/Coverage views, and exporting results.
+MonkeySphere Web is a browser-based loudspeaker directivity and polar-data analysis tool. It uses a modern
+React + TypeScript stack and offers loading polar datasets, visualizing them in 3D/2D/ISO/Coverage views,
+and exporting results.
 
 ## Highlights
 

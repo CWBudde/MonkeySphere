@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getFrequencyAtBand,
-  getAngleAtIndex,
-  type AxisDef,
-  type FreqDef,
-} from "../types";
+import { getFrequencyAtBand, getAngleAtIndex, type AxisDef, type FreqDef } from "../types";
 
 describe("getFrequencyAtBand", () => {
   it("returns startHz for band index 0", () => {

@@ -43,10 +43,7 @@ export function setSample(
 /**
  * Get horizontal slice data for a specific band (azimuth=0, all polar angles).
  */
-export function getHorizontalSlice(
-  dataset: Dataset,
-  bandIndex: number,
-): Float32Array {
+export function getHorizontalSlice(dataset: Dataset, bandIndex: number): Float32Array {
   const polarCount = dataset.polar.count;
   const slice = new Float32Array(polarCount);
   for (let pol = 0; pol < polarCount; pol++) {
@@ -59,17 +56,12 @@ export function getHorizontalSlice(
  * Get vertical slice data for a specific band (azimuth=90° index, all polar angles).
  * Returns empty array if azimuth=90° doesn't exist in the dataset.
  */
-export function getVerticalSlice(
-  dataset: Dataset,
-  bandIndex: number,
-): Float32Array {
+export function getVerticalSlice(dataset: Dataset, bandIndex: number): Float32Array {
   const polarCount = dataset.polar.count;
   const azimuthCount = dataset.azimuth.count;
 
   // Find the azimuth index for 90 degrees
-  const az90Index = Math.round(
-    (90 - dataset.azimuth.startDeg) / dataset.azimuth.stepDeg,
-  );
+  const az90Index = Math.round((90 - dataset.azimuth.startDeg) / dataset.azimuth.stepDeg);
 
   if (az90Index < 0 || az90Index >= azimuthCount) {
     return new Float32Array(0);
