@@ -21,6 +21,7 @@ export type SphereMode = "quarter" | "half" | "full" | "horizontal" | "vertical"
 export type DatasetMeta = {
   name?: string;
   manufacturer?: string;
+  date?: string;
   notes?: string;
 };
 

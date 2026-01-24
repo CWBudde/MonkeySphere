@@ -6,6 +6,8 @@ This file provides guidance to AI Agents such as Claude Code and Codex when work
 
 MonkeySphere is a browser-based loudspeaker directivity and polar-data analysis tool. It replaces a legacy Delphi application with a modern React + TypeScript stack while preserving the original workflows: loading polar datasets, visualizing them in 3D/2D/ISO/Coverage views, and exporting results.
 
+A detailed analysis of the legacy codebase and planned architecture can be found in [legacy-source-analysis.md](docs/legacy-source-analysis.md).
+
 ## Development Commands
 
 **Package manager:** Bun (not npm/yarn/pnpm)

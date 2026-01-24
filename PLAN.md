@@ -45,37 +45,37 @@ Port the fundamental data structures from `MBFormats.pas` and `MBMain.pas`.
 
 ### 1.2 Dataset Structure
 
-- [ ] Define `SphereMode` type: `'full' | 'half' | 'quarter' | 'horizontal' | 'vertical'`
-- [ ] Define `DatasetMeta` interface
-  - [ ] `name?: string`
-  - [ ] `manufacturer?: string`
-  - [ ] `date?: string`
-  - [ ] `notes?: string`
-- [ ] Define `Dataset` interface
-  - [ ] `azimuth: AxisDef`
-  - [ ] `polar: AxisDef`
-  - [ ] `freq: FreqDef`
-  - [ ] `sphereMode: SphereMode`
-  - [ ] `samples: Float32Array` (flattened 3D array)
-  - [ ] `meta: DatasetMeta`
-  - [ ] `spectrum?: SpectrumData` (optional, from `spec` chunk)
+- [x] Define `SphereMode` type: `'full' | 'half' | 'quarter' | 'horizontal' | 'vertical'`
+- [x] Define `DatasetMeta` interface
+  - [x] `name?: string`
+  - [x] `manufacturer?: string`
+  - [x] `date?: string`
+  - [x] `notes?: string`
+- [x] Define `Dataset` interface
+  - [x] `azimuth: AxisDef`
+  - [x] `polar: AxisDef`
+  - [x] `freq: FreqDef`
+  - [x] `sphereMode: SphereMode`
+  - [x] `samples: Float32Array` (flattened 3D array)
+  - [x] `meta: DatasetMeta`
+  - [x] `spectrum?: SpectrumData` (optional, from `spec` chunk)
 
 ### 1.3 Sample Access Helpers
 
-- [ ] Create `src/domain/dataset.ts`
-- [ ] Implement `getSampleIndex(dataset, azIndex, polIndex, bandIndex): number`
-- [ ] Implement `getSample(dataset, azIndex, polIndex, bandIndex): number`
-- [ ] Implement `setSample(dataset, azIndex, polIndex, bandIndex, value): void`
-- [ ] Implement `getHorizontalSlice(dataset, bandIndex): Float32Array`
-- [ ] Implement `getVerticalSlice(dataset, bandIndex): Float32Array`
-- [ ] Implement `getBandData(dataset, bandIndex): Float32Array` (all angles for one band)
+- [x] Create `src/domain/dataset.ts`
+- [x] Implement `getSampleIndex(dataset, azIndex, polIndex, bandIndex): number`
+- [x] Implement `getSample(dataset, azIndex, polIndex, bandIndex): number`
+- [x] Implement `setSample(dataset, azIndex, polIndex, bandIndex, value): void`
+- [x] Implement `getHorizontalSlice(dataset, bandIndex): Float32Array`
+- [x] Implement `getVerticalSlice(dataset, bandIndex): Float32Array`
+- [x] Implement `getBandData(dataset, bandIndex): Float32Array` (all angles for one band)
 
 ### 1.4 Unit Tests for Data Model
 
-- [ ] Create `src/domain/__tests__/dataset.test.ts`
-- [ ] Test index calculation matches legacy formula
-- [ ] Test slice extraction for known synthetic data
-- [ ] Test edge cases (single-band, single-angle datasets)
+- [x] Create `src/domain/__tests__/dataset.test.ts`
+- [x] Test index calculation matches legacy formula
+- [x] Test slice extraction for known synthetic data
+- [x] Test edge cases (single-band, single-angle datasets)
 
 ---
 
