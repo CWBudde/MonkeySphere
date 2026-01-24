@@ -166,8 +166,8 @@ Implement the native `.mob` file format parser and writer.
 - [x] Create `src/codecs/mob/__tests__/mob.test.ts`
 - [x] Test header parsing with known byte sequences
 - [x] Test round-trip: create dataset → write → read → compare
-- [ ] Test with real `.mob` fixture files from legacy app
-- [ ] Test optional chunk handling (missing vs present)
+- [x] Test with real `.mob` fixture files from legacy app (MonkeySpeaker.mob and 6 others)
+- [x] Test optional chunk handling (missing vs present - clf_, comm, spec chunks)
 
 ---
 
@@ -272,48 +272,48 @@ Implement the 2D polar plot visualization (simplest view to start).
 
 ### 6.1 Polar Plot Canvas
 
-- [ ] Create `src/views/view2d/PolarPlot.tsx`
-- [ ] Set up Canvas element with proper sizing
-- [ ] Implement resize handling (responsive)
+- [x] Create `src/views/view2d/PolarPlot.tsx`
+- [x] Set up Canvas element with proper sizing
+- [x] Implement resize handling (responsive)
 
 ### 6.2 Grid Rendering
 
-- [ ] Implement `drawPolarGrid(ctx, options)`
-  - [ ] Draw concentric circles at dB intervals (e.g., every 6 dB)
-  - [ ] Draw radial lines at angle intervals (e.g., every 30°)
-  - [ ] Draw axis labels (0°, 90°, 180°, 270°)
-  - [ ] Draw dB labels on circles
+- [x] Implement `drawPolarGrid(ctx, options)`
+  - [x] Draw concentric circles at dB intervals (e.g., every 6 dB)
+  - [x] Draw radial lines at angle intervals (e.g., every 30°)
+  - [x] Draw axis labels (0°, 90°, 180°, 270°)
+  - [x] Draw dB labels on circles
 
 ### 6.3 Slice Rendering
 
-- [ ] Implement `drawSlice(ctx, data, color, options)`
-  - [ ] Convert polar data to Cartesian coordinates
-  - [ ] Draw polyline connecting all points
-  - [ ] Close the path for full 360° data
-- [ ] Draw horizontal slice (red) from `getHorizontalSlice()`
-- [ ] Draw vertical slice (blue) from `getVerticalSlice()`
+- [x] Implement `drawSlice(ctx, data, color, options)`
+  - [x] Convert polar data to Cartesian coordinates
+  - [x] Draw polyline connecting all points
+  - [x] Close the path for full 360° data
+- [x] Draw horizontal slice (red) from `getHorizontalSlice()`
+- [x] Draw vertical slice (blue) from `getVerticalSlice()`
 
 ### 6.4 Normalization
 
-- [ ] Create `src/domain/normalize.ts`
-- [ ] Implement `computeMaximum(dataset, bandIndex): number`
-- [ ] Implement `computeMinimum(dataset, bandIndex): number`
-- [ ] Implement `normalizeValue(value, min, max, range): number`
-- [ ] Apply normalization before rendering
+- [x] Create `src/domain/normalize.ts`
+- [x] Implement `computeMaximum(dataset, bandIndex): number`
+- [x] Implement `computeMinimum(dataset, bandIndex): number`
+- [x] Implement `normalizeValue(value, min, max, range): number`
+- [x] Apply normalization before rendering
 
 ### 6.5 2D View Options
 
-- [ ] Create `src/views/view2d/View2dOptions.tsx`
-- [ ] Toggle horizontal slice on/off
-- [ ] Toggle vertical slice on/off
-- [ ] Direction selector (Front/Back/Left/Right)
-- [ ] Range controls (max dB, range dB)
+- [x] Create `src/views/view2d/View2dOptions.tsx`
+- [x] Toggle horizontal slice on/off
+- [x] Toggle vertical slice on/off
+- [x] Direction selector (Front/Back/Left/Right)
+- [x] Range controls (max dB, range dB)
 
 ### 6.6 Unit Tests for 2D Rendering
 
-- [ ] Test coordinate conversion
-- [ ] Test normalization math
-- [ ] Snapshot test for known dataset
+- [x] Test coordinate conversion
+- [x] Test normalization math
+- [x] Snapshot test for known dataset
 
 ---
 
@@ -323,29 +323,29 @@ Implement the 3/6/9 dB coverage calculation used by multiple views.
 
 ### 7.1 Coverage Algorithm
 
-- [ ] Create `src/domain/coverage.ts`
-- [ ] Define `CoverageResult` type:
-  - [ ] `thresholds: number[]` (e.g., [3, 6, 9])
-  - [ ] `indices: number[][][]` (threshold × band × azimuth → polar index)
-- [ ] Implement `calcCoverage(dataset: Dataset, thresholds: number[]): CoverageResult`
-  - [ ] For each band:
-    - [ ] For each azimuth:
-      - [ ] Find on-axis value (polar = 0)
-      - [ ] Walk outward in polar angle
-      - [ ] Find index where value drops below threshold
-  - [ ] Handle edge cases (never drops, drops immediately)
+- [x] Create `src/domain/coverage.ts`
+- [x] Define `CoverageResult` type:
+  - [x] `thresholds: number[]` (e.g., [3, 6, 9])
+  - [x] `indices: number[][][]` (threshold × band × azimuth → polar index)
+- [x] Implement `calcCoverage(dataset: Dataset, thresholds: number[]): CoverageResult`
+  - [x] For each band:
+    - [x] For each azimuth:
+      - [x] Find on-axis value (polar = 0)
+      - [x] Walk outward in polar angle
+      - [x] Find index where value drops below threshold
+  - [x] Handle edge cases (never drops, drops immediately)
 
 ### 7.2 Coverage Helpers
 
-- [ ] Implement `getCoverageAngle(result, threshold, band, azimuth): number`
-- [ ] Implement `getCoverageContour(result, threshold, band): {az: number, pol: number}[]`
+- [x] Implement `getCoverageAngle(result, threshold, band, azimuth): number`
+- [x] Implement `getCoverageContour(result, threshold, band): {az: number, pol: number}[]`
 
 ### 7.3 Unit Tests for Coverage
 
-- [ ] Create `src/domain/__tests__/coverage.test.ts`
-- [ ] Test with synthetic dataset (known falloff pattern)
-- [ ] Test edge cases (flat response, steep falloff)
-- [ ] Test all three threshold levels
+- [x] Create `src/domain/__tests__/coverage.test.ts`
+- [x] Test with synthetic dataset (known falloff pattern)
+- [x] Test edge cases (flat response, steep falloff)
+- [x] Test all three threshold levels
 
 ---
 
@@ -355,26 +355,26 @@ Implement the 2D coverage contour visualization.
 
 ### 8.1 Coverage View Canvas
 
-- [ ] Create `src/views/viewCoverage/CoverageView.tsx`
-- [ ] Set up Canvas with square aspect ratio
-- [ ] Draw grid from -90° to +90° on both axes
+- [x] Create `src/views/viewCoverage/CoverageView.tsx`
+- [x] Set up Canvas with square aspect ratio
+- [x] Draw grid from -90° to +90° on both axes
 
 ### 8.2 Contour Rendering
 
-- [ ] Implement `drawCoverageContour(ctx, contour, threshold, color)`
-  - [ ] Project (azimuth, polar) to (x, y) using trig
-  - [ ] Draw closed contour path
-  - [ ] Fill with semi-transparent color
-- [ ] Draw 3 dB contour (innermost)
-- [ ] Draw 6 dB contour (middle)
-- [ ] Draw 9 dB contour (outermost)
+- [x] Implement `drawCoverageContour(ctx, contour, threshold, color)`
+- [x] Project (azimuth, polar) to (x, y) using trig
+- [x] Draw closed contour path
+- [x] Fill with semi-transparent color
+- [x] Draw 3 dB contour (innermost)
+- [x] Draw 6 dB contour (middle)
+- [x] Draw 9 dB contour (outermost)
 
 ### 8.3 Coverage View Options
 
-- [ ] Create `src/views/viewCoverage/CoverageOptions.tsx`
-- [ ] Toggle individual thresholds on/off
-- [ ] Color picker for each threshold
-- [ ] Opacity controls
+- [x] Create `src/views/viewCoverage/CoverageOptions.tsx`
+- [x] Toggle individual thresholds on/off
+- [x] Color picker for each threshold
+- [x] Opacity controls
 
 ---
 
@@ -384,11 +384,11 @@ Implement the interactive 3D sphere visualization.
 
 ### 9.1 Three.js Setup
 
-- [ ] Install dependencies: `bun add three @react-three/fiber @react-three/drei`
-- [ ] Create `src/views/view3d/View3d.tsx`
-- [ ] Set up R3F Canvas with proper sizing
-- [ ] Add OrbitControls for camera interaction
-- [ ] Add ambient + directional lighting
+- [x] Install dependencies: `bun add three @react-three/fiber @react-three/drei`
+- [x] Create `src/views/view3d/View3d.tsx`
+- [x] Set up R3F Canvas with proper sizing
+- [x] Add OrbitControls for camera interaction
+- [x] Add ambient + directional lighting
 
 ### 9.2 Sphere Mesh Generation
 
@@ -402,17 +402,17 @@ Implement the interactive 3D sphere visualization.
 
 ### 9.3 Vertex Coloring
 
-- [ ] Create `src/domain/colormap.ts`
-- [ ] Implement `createColormap(name: 'rainbow' | 'thermal' | 'grayscale'): (t: number) => RGB`
-- [ ] Implement `sampleColormap(colormap, value, min, max): RGB`
-- [ ] Apply vertex colors to mesh based on sample values
+- [x] Create `src/domain/colormap.ts`
+- [x] Implement `createColormap(name: 'rainbow' | 'thermal' | 'grayscale'): (t: number) => RGB`
+- [x] Implement `sampleColormap(colormap, value, min, max): RGB`
+- [x] Apply vertex colors to mesh based on sample values
 
 ### 9.4 Dots Overlay
 
-- [ ] Create `src/views/view3d/DotsOverlay.tsx`
-- [ ] Render point cloud at vertex positions
-- [ ] Configurable dot size and color
-- [ ] Toggle on/off
+- [x] Create `src/views/view3d/DotsOverlay.tsx`
+- [x] Render point cloud at vertex positions
+- [x] Configurable dot size and color
+- [x] Toggle on/off
 
 ### 9.5 Coverage Overlay (3D)
 

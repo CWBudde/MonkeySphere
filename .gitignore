@@ -18,3 +18,9 @@ dist/
 
 # Legacy
 legacy/
+
+# Test data
+test-data/CLFs/
+test-data/GLL/
+test-data/CF2/
+test-data/SPK-Set/

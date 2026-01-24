@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { openFileFromFile } from "../../features";
 import { addToMru } from "../../storage/mru";
 import { useDatasetStore } from "../../store";
-import { View2d } from "../../views";
+import { View2d, View3d, ViewCoverage } from "../../views";
 
 const viewLabels: Record<string, string> = {
   "3d": "3D Balloon",
@@ -70,8 +70,10 @@ export function ViewContainer() {
       )}
 
       {dataset && viewMode === "2d" && <View2d />}
+      {dataset && viewMode === "3d" && <View3d />}
+      {dataset && viewMode === "coverage" && <ViewCoverage />}
 
-      {dataset && viewMode !== "2d" && (
+      {dataset && viewMode !== "2d" && viewMode !== "3d" && viewMode !== "coverage" && (
         <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/40 px-6 py-12 text-center">
           <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Active View</div>
           <h2 className="mt-3 text-2xl font-semibold text-slate-100">{placeholder}</h2>

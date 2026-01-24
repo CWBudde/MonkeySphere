@@ -1,7 +1,7 @@
 import { Toolbar } from "./Toolbar";
 import { ViewContainer } from "./ViewContainer";
 import { useDatasetStore } from "../../store";
-import { View2dOptions } from "../../views";
+import { CoverageOptions, View2dOptions, View3dOptions } from "../../views";
 
 export function AppShell() {
   const dataset = useDatasetStore((state) => state.dataset);
@@ -35,6 +35,10 @@ export function AppShell() {
             <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Options</div>
             {dataset && viewMode === "2d" ? (
               <View2dOptions />
+            ) : dataset && viewMode === "coverage" ? (
+              <CoverageOptions />
+            ) : dataset && viewMode === "3d" ? (
+              <View3dOptions />
             ) : (
               <p className="text-sm text-slate-300">View-specific controls will live here.</p>
             )}
