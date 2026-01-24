@@ -1,419 +1,787 @@
-# MonkeySphere Web – Implementation Plan (React + TS + Vite + Bun + Tailwind)
-
-This plan converts the `legacy/Source` Delphi application into a modern web app while keeping the same core capabilities: load/visualize/export loudspeaker polar datasets, with 3D/2D/ISO/Coverage views.
-
-## 0) Scope & principles
-
-### In scope (MVP → parity)
-- Load, display, and export speaker polar datasets.
-- Support the same primary view modes:
-  - 3D balloon/sphere
-  - 2D polar plots (horizontal/vertical)
-  - Coverage view (3/6/9 dB)
-  - ISO view (frequency vs angle heatmap)
-- Support at least the native `.mob` format first, then add other formats.
-- Persist settings (view options, last file, MRU) locally.
-
-### Out of scope (explicit)
-- Any copy protection / registration logic.
-- PowerPoint integration and installer.
-- ActiveX-related code paths.
-- MATLAB/Excel COM automation.
-
-### Guiding principles
-- Separate concerns:
-  - **Codecs** (parse/write) are pure and unit-tested.
-  - **Derived computations** (coverage, normalizations) are deterministic and unit-tested.
-  - **Rendering** uses explicit, reusable view-models and does not own business logic.
-- Keep the core data model compatible with legacy semantics:
-  - angular axes + banded frequency axis
-  - flattened array storage (fast, easy to interop)
-- Keep the UI responsive:
-  - parsing + heavy computations in Web Workers where beneficial.
-
-## 1) Project setup (Vite + Bun + Tailwind)
-
-### Tooling
-- Runtime/dev server: Vite
-- Package manager: Bun
-- Language: TypeScript
-- UI: React
-- Styling: Tailwind
-
-### Commands
-- Create app: `bun create vite` (React + TS)
-- Install deps: `bun install`
-- Dev: `bun run dev`
-- Build: `bun run build`
-- Test: `bun run test`
-
-### Recommended libraries
-Minimal, high-ROI set:
-- State: `zustand` (small, ergonomic)
-- Validation: `zod` (for settings schemas)
-- 3D: `three` + `@react-three/fiber` (+ optional `@react-three/drei`)
-- Charts (2D polar/ISO): start with Canvas/SVG (custom) to avoid heavy dependencies; optionally evaluate `d3` later.
-- Tests: `vitest` + `@testing-library/react`
-
-
-## 2) Target architecture
-
-### Folder layout (proposed)
-```
-src/
-  app/
-    App.tsx
-    routes.tsx
-    shell/
-  domain/
-    dataset/
-      types.ts
-      axes.ts
-      dataset.ts
-      derive.ts
-      coverage.ts
-      normalize.ts
-  codecs/
-    riff/
-      riffReader.ts
-      riffWriter.ts
-    mob/
-      mobTypes.ts
-      mobRead.ts
-      mobWrite.ts
-    text/
-      clf.ts
-      unf.ts
-      xhn.ts
-      gdf.ts
-  workers/
-    parseWorker.ts
-    computeWorker.ts
-  features/
-    fileOpen/
-    export/
-    views/
-      view3d/
-      view2d/
-      viewIso/
-      viewCoverage/
-    options/
-  ui/
-    components/
-    layout/
-    primitives/
-  storage/
-    settings.ts
-    mru.ts
-  utils/
-    math.ts
-    terz.ts
-    colorMap.ts
-```
-
-### Core boundaries
-- `domain/`: platform-agnostic logic (no DOM, no Three.js).
-- `codecs/`: parse/write modules; return/accept `domain/dataset` structures.
-- `features/`: UI workflows (open file, change view, export).
-- `views/`: rendering surfaces for each view mode.
-- `workers/`: off-main-thread parsing and heavy compute.
-
-
-## 3) Data model (mirror legacy semantics)
-
-### Canonical dataset shape
-Represent the dataset similarly to Delphi:
-- Axes:
-  - azimuth: start, step, values
-  - polar: start, step, values
-  - frequency bands: `freqStart`, `freqStep`, `freqBands`
-- Samples:
-  - `Float32Array` length = `azimuth.values * polar.values * freqBands`
-  - index = `az * polar.values * freqBands + pol * freqBands + band`
-
-### Types (initial)
-- `AxisDef { startDeg: number; stepDeg: number; values: number }`
-- `FreqDef { startHz: number; stepPerOctave: number; bands: number }`
-- `SphereMode = 'quarter' | 'half' | 'full' | 'horizontal' | 'vertical'`
-- `Dataset { header: MobHeaderLike; axes: { azimuth; polar; freq }; samples: Float32Array; meta: { name?; manufacturer?; notes? }; spectrum?: SpectrumChunk }`
-
-### Derived data
-Computed on demand (memoized):
-- `coverageIndices[thresholdIndex][band][az]` (like legacy `fStdCoverage`)
-- view-dependent normalization (legacy has “maximum/norm” behavior)
-
-
-## 4) File formats implementation order
-
-### Phase 1 (must-have): `.mob` (native)
-Goal: full-fidelity round trip for the web app.
-- Implement a RIFF reader/writer.
-- Implement `MOBA` header read/write.
-- Implement required `plev` chunk parse/write.
-- Parse optional chunks if present:
-  - `clf_` metadata
-  - `spec` spectrum
-  - `comm`, `fico`
-
-Acceptance criteria:
-- Can open existing `.mob` files and render all views.
-- Can re-save `.mob` without data loss (for supported chunks).
-- Unit tests: read/write symmetry for synthetic fixtures.
-
-### Phase 2: CLF-like text (`.txt/.tab`)
-- Parse the subset needed to match legacy load behavior.
-- Support sensitivity adjustments and on-axis checks as optional warnings.
-
-### Phase 3: XHN / UNF / GDF
-- Add one-by-one with golden test fixtures.
-- Keep parsers tolerant (legacy code has many leniencies).
-
-
-## 5) Rendering plan (feature parity)
-
-### View switching
-Implement a single view state:
-- `viewMode: '3d' | '2d' | 'coverage' | 'iso'`
-- `selectedBandIndex` OR `isoAzimuthAngle` when ISO mode uses angle selection.
-
-### 5.1 3D balloon/sphere
-Approach: Three.js via React Three Fiber.
-- Create a sphere mesh parameterized by polar/azimuth grid.
-- For each vertex, set radius from normalized value:
-  - `r = clamp((value - minimum) / range, 0, rMax)`
-- Apply vertex colors from a colormap (legacy gradient modes).
-- Optional overlays:
-  - dots (point cloud)
-  - coverage loops (3/6/9 dB) as line geometries
-- Camera controls: orbit controls + reset.
-
-Acceptance criteria:
-- Displays geometry consistent with legacy shape changes as band changes.
-- Dots/coverage toggles work.
-
-### 5.2 2D polar plots
-Approach: Canvas (fast) or SVG (simple). Start with Canvas.
-- Draw grid circles and axes labels.
-- Draw up to two polylines:
-  - horizontal slice (red)
-  - vertical slice (blue)
-- Support direction/view options (legacy “Front/Back/Left/Right/Up/Down”).
-- Support normalization behavior used in the 2D rendering.
-
-Acceptance criteria:
-- Correctly updates with band selection.
-- Matches the app’s basic orientation options.
-
-### 5.3 Coverage view
-Approach: Canvas.
-- Draw square grid (-90..+90 deg labels).
-- For each threshold (3/6/9 dB):
-  - compute coverage contour per azimuth
-  - project to 2D and draw contour
-
-Acceptance criteria:
-- Contours change with band and match the intuition of narrowing/widening.
-
-### 5.4 ISO view (frequency vs angle)
-Approach: Canvas first (image-based heatmap), upgrade to WebGL if needed.
-- X axis = band index range (lower..upper)
-- Y axis = angle from 0..maxAngle, mirrored
-- Z/value = normalized value mapped to colormap
-- Optional overlays:
-  - polar arcs
-  - coverage lines
-- Allow selection of azimuth slice (`isoAngle`) similar to legacy.
-
-Acceptance criteria:
-- Heatmap renders quickly for typical dataset sizes.
-- Labels align with band frequency labeling.
-
-
-## 6) Derived computations (domain layer)
-
-### Normalization modes
-The legacy UI has behavior where “maximum” can be derived from averages around a norm angle range. Implement as explicit functions:
-- `computeMinimum(dataset, band, rangeSettings): number`
-- `normalizeValue(value, minimum, range): number`
-
-### Coverage computation
-Port `CalcCoverage` into pure TS:
-- Inputs: `dataset`, `band`, thresholds `[3,6,9]`, sphere mode
-- Output: indices or angles for coverage boundary per azimuth
-
-Testing:
-- Deterministic tests with small synthetic datasets.
-
-### Terz/third-octave utilities
-Implement:
-- `terzIndex(fHz)`
-- `terzFrequency(index)`
-- helper to compute band center frequency and label.
-
-
-## 7) Import pipeline (post-MVP, but planned)
-
-Goal: bring over the “value add” import wizard (IR/audio → banded polar dataset).
-
-### Implementation approach
-- UI: drag-drop / directory selection (where supported) or multi-file import.
-- Parsing/FFT/banding in a worker.
-- Audio decode: Web Audio API (`AudioContext.decodeAudioData`) where possible.
-- FFT: a fast JS FFT library (evaluate performance; switch to WASM later if required).
-
-### Output
-- Build a dataset matching the canonical model.
-- Export to `.mob`.
-
-Acceptance criteria:
-- For a known measurement set, produces a plausible balloon and correct band labels.
-
-
-## 8) Export features
-
-### Images
-- Export current view as PNG:
-  - Canvas: `toDataURL` or `toBlob`
-  - Three.js: renderer capture
-
-### Data exports
-- `.mob` save (Phase 1)
-- CSV export as a replacement for legacy Excel automation.
-- POX: implement if needed (specify exact expected output from legacy before porting).
-
-
-## 9) Settings persistence
-
-Replace INI with JSON:
-- `localStorage` for:
-  - last opened file metadata
-  - MRU list (file names only; browser sandbox applies)
-  - view settings and style options
-
-Use `zod` to version settings schemas.
-
-
-## 10) UX plan (screens)
-
-### App shell
-- Top toolbar:
-  - Open
-  - Save / Save As
-  - Export PNG
-  - View mode buttons (3D / 2D / ISO / Coverage)
-  - Band selector
+# MonkeySphere Web – Implementation Plan
+
+Re-implementation of the legacy Delphi loudspeaker directivity visualization tool as a modern React + TypeScript web application.
+
+## Scope
+
+### In Scope
+
+- Load and save polar datasets (`.mob` native format + industry formats)
+- 3D balloon/sphere visualization with interactive controls
+- 2D polar plots (horizontal/vertical slices)
+- Coverage view (3/6/9 dB contours)
+- ISO view (frequency vs angle heatmap)
+- Import pipeline for IR/audio measurements
+- PNG and CSV export
+- Persistent user settings
+
+### Out of Scope
+
+- Copy protection / registration
+- PowerPoint integration
+- ActiveX components
+- MATLAB/Excel COM automation
+- Installer packaging
 
-### Left/right panels
-- Options panel (collapsible):
-  - range settings (max/range/norm)
-  - color/gradient settings
-  - toggles for dots/coverage/legend
-  - ISO-specific controls (angle, band range, max angle)
+---
+
+## Milestone 1: Core Data Model & Types
+
+Port the fundamental data structures from `MBFormats.pas` and `MBMain.pas`.
+
+### 1.1 Axis Definitions
+
+- [x] Create `src/domain/types.ts`
+- [x] Define `AxisDef` interface
+  - [x] `startDeg: number` (start angle in degrees)
+  - [x] `stepDeg: number` (step size in degrees)
+  - [x] `count: number` (number of values)
+- [x] Define `FreqDef` interface
+  - [x] `startHz: number` (start frequency)
+  - [x] `bandsPerOctave: number` (1, 3, 4, 10, 12, or 24)
+  - [x] `bandCount: number` (total bands)
+- [x] Add helper: `getFrequencyAtBand(freq: FreqDef, bandIndex: number): number`
+- [x] Add helper: `getAngleAtIndex(axis: AxisDef, index: number): number`
+
+### 1.2 Dataset Structure
+
+- [ ] Define `SphereMode` type: `'full' | 'half' | 'quarter' | 'horizontal' | 'vertical'`
+- [ ] Define `DatasetMeta` interface
+  - [ ] `name?: string`
+  - [ ] `manufacturer?: string`
+  - [ ] `date?: string`
+  - [ ] `notes?: string`
+- [ ] Define `Dataset` interface
+  - [ ] `azimuth: AxisDef`
+  - [ ] `polar: AxisDef`
+  - [ ] `freq: FreqDef`
+  - [ ] `sphereMode: SphereMode`
+  - [ ] `samples: Float32Array` (flattened 3D array)
+  - [ ] `meta: DatasetMeta`
+  - [ ] `spectrum?: SpectrumData` (optional, from `spec` chunk)
+
+### 1.3 Sample Access Helpers
+
+- [ ] Create `src/domain/dataset.ts`
+- [ ] Implement `getSampleIndex(dataset, azIndex, polIndex, bandIndex): number`
+- [ ] Implement `getSample(dataset, azIndex, polIndex, bandIndex): number`
+- [ ] Implement `setSample(dataset, azIndex, polIndex, bandIndex, value): void`
+- [ ] Implement `getHorizontalSlice(dataset, bandIndex): Float32Array`
+- [ ] Implement `getVerticalSlice(dataset, bandIndex): Float32Array`
+- [ ] Implement `getBandData(dataset, bandIndex): Float32Array` (all angles for one band)
+
+### 1.4 Unit Tests for Data Model
+
+- [ ] Create `src/domain/__tests__/dataset.test.ts`
+- [ ] Test index calculation matches legacy formula
+- [ ] Test slice extraction for known synthetic data
+- [ ] Test edge cases (single-band, single-angle datasets)
+
+---
+
+## Milestone 2: RIFF Container Parser
+
+Implement the RIFF chunk reader/writer needed for `.mob` files.
+
+### 2.1 RIFF Reader
+
+- [ ] Create `src/codecs/riff/riffReader.ts`
+- [ ] Define `RiffChunk` interface: `{ id: string; size: number; data: ArrayBuffer }`
+- [ ] Implement `readRiffFile(buffer: ArrayBuffer): RiffFile`
+  - [ ] Parse RIFF header (4-byte "RIFF", 4-byte size, 4-byte form type)
+  - [ ] Validate form type is "MOBA"
+  - [ ] Parse chunk list iteratively
+  - [ ] Handle chunk padding (RIFF chunks are word-aligned)
+- [ ] Implement `getChunk(file: RiffFile, chunkId: string): RiffChunk | undefined`
+- [ ] Implement `getAllChunks(file: RiffFile): RiffChunk[]`
+
+### 2.2 RIFF Writer
+
+- [ ] Create `src/codecs/riff/riffWriter.ts`
+- [ ] Implement `createRiffFile(formType: string, chunks: RiffChunk[]): ArrayBuffer`
+  - [ ] Write RIFF header
+  - [ ] Write each chunk with proper padding
+  - [ ] Calculate and write total size
+
+### 2.3 Unit Tests for RIFF
+
+- [ ] Create `src/codecs/riff/__tests__/riff.test.ts`
+- [ ] Test round-trip: write → read → compare
+- [ ] Test with multiple chunks
+- [ ] Test chunk padding behavior
+- [ ] Test error handling for malformed files
+
+---
+
+## Milestone 3: MOB Format Codec
+
+Implement the native `.mob` file format parser and writer.
+
+### 3.1 MOB Header Parsing
+
+- [ ] Create `src/codecs/mob/mobTypes.ts`
+- [ ] Define `MobHeader` interface matching `TMoBHeader` from legacy
+  - [ ] Version fields
+  - [ ] Azimuth axis (start, step, values)
+  - [ ] Polar axis (start, step, values)
+  - [ ] Frequency definition (start, step, bands)
+  - [ ] Sphere mode
+- [ ] Create `src/codecs/mob/mobRead.ts`
+- [ ] Implement `parseMobHeader(data: DataView): MobHeader`
+  - [ ] Read all header fields with correct byte offsets
+  - [ ] Handle endianness (little-endian)
+
+### 3.2 MOB Data Chunks
+
+- [ ] Implement `parsePlevChunk(chunk: ArrayBuffer, header: MobHeader): Float32Array`
+  - [ ] Read polar level grid as 32-bit floats
+  - [ ] Validate size matches expected sample count
+- [ ] Implement `parseClfChunk(chunk: ArrayBuffer): DatasetMeta`
+  - [ ] Extract metadata strings (name, manufacturer, notes)
+- [ ] Implement `parseSpecChunk(chunk: ArrayBuffer): SpectrumData`
+  - [ ] Parse spectrum/impulse data (post-MVP, stub initially)
+- [ ] Implement `parseCommChunk(chunk: ArrayBuffer): string` (comment)
+
+### 3.3 MOB File Reader
+
+- [ ] Implement `readMobFile(buffer: ArrayBuffer): Dataset`
+  - [ ] Use RIFF reader to extract chunks
+  - [ ] Parse header from MOBA chunk
+  - [ ] Parse `plev` chunk for sample data
+  - [ ] Parse optional chunks (`clf_`, `spec`, `comm`)
+  - [ ] Construct and return `Dataset`
+
+### 3.4 MOB File Writer
+
+- [ ] Create `src/codecs/mob/mobWrite.ts`
+- [ ] Implement `writeMobHeader(header: MobHeader): ArrayBuffer`
+- [ ] Implement `writePlevChunk(samples: Float32Array): ArrayBuffer`
+- [ ] Implement `writeClfChunk(meta: DatasetMeta): ArrayBuffer`
+- [ ] Implement `writeMobFile(dataset: Dataset): ArrayBuffer`
+  - [ ] Construct all chunks
+  - [ ] Use RIFF writer to create file
+
+### 3.5 Unit Tests for MOB Codec
+
+- [ ] Create `src/codecs/mob/__tests__/mob.test.ts`
+- [ ] Test header parsing with known byte sequences
+- [ ] Test round-trip: create dataset → write → read → compare
+- [ ] Test with real `.mob` fixture files from legacy app
+- [ ] Test optional chunk handling (missing vs present)
+
+---
+
+## Milestone 4: Application State & File Handling
+
+Set up global state management and file open/save workflows.
+
+### 4.1 State Management Setup
+
+- [ ] Install zustand: `bun add zustand`
+- [ ] Create `src/store/datasetStore.ts`
+- [ ] Define store interface:
+  - [ ] `dataset: Dataset | null`
+  - [ ] `filePath: string | null`
+  - [ ] `isDirty: boolean`
+  - [ ] `selectedBandIndex: number`
+  - [ ] `viewMode: '3d' | '2d' | 'coverage' | 'iso'`
+- [ ] Implement actions:
+  - [ ] `loadDataset(dataset: Dataset, path?: string)`
+  - [ ] `closeDataset()`
+  - [ ] `setSelectedBand(index: number)`
+  - [ ] `setViewMode(mode: ViewMode)`
+  - [ ] `markDirty()` / `markClean()`
+
+### 4.2 File Open Workflow
+
+- [ ] Create `src/features/fileOpen/fileOpen.ts`
+- [ ] Implement `openFile(): Promise<Dataset | null>`
+  - [ ] Use File System Access API or `<input type="file">`
+  - [ ] Detect format by extension
+  - [ ] Call appropriate codec
+  - [ ] Return parsed dataset
+- [ ] Create `src/features/fileOpen/FileOpenButton.tsx`
+  - [ ] Trigger file picker on click
+  - [ ] Show loading state during parse
+  - [ ] Update store on success
+  - [ ] Show error toast on failure
+
+### 4.3 File Save Workflow
+
+- [ ] Create `src/features/fileSave/fileSave.ts`
+- [ ] Implement `saveFile(dataset: Dataset, format: string): Promise<void>`
+  - [ ] Serialize using appropriate codec
+  - [ ] Trigger download or use File System Access API
+- [ ] Create `src/features/fileSave/FileSaveButton.tsx`
+  - [ ] Save As dialog with format selection
+  - [ ] Quick Save if path known
+
+### 4.4 MRU (Most Recently Used) List
+
+- [ ] Create `src/storage/mru.ts`
+- [ ] Implement `getMruList(): string[]`
+- [ ] Implement `addToMru(filename: string)`
+- [ ] Implement `clearMru()`
+- [ ] Store in localStorage (names only, not paths)
 
-### Error/Warnings panel
-- Show parse/import warnings (on-axis checks, malformed files).
+---
 
+## Milestone 5: App Shell & Navigation
+
+Build the main application layout and view switching.
+
+### 5.1 App Layout
+
+- [ ] Create `src/app/shell/AppShell.tsx`
+  - [ ] Header with app title and file info
+  - [ ] Toolbar row for primary actions
+  - [ ] Main content area (view container)
+  - [ ] Optional sidebar for options panel
+  - [ ] Status bar (band info, file status)
+
+### 5.2 Toolbar
+
+- [ ] Create `src/app/shell/Toolbar.tsx`
+- [ ] Add Open button (connected to file open)
+- [ ] Add Save/Save As buttons
+- [ ] Add Export PNG button (placeholder)
+- [ ] Add view mode toggle buttons: 3D / 2D / Coverage / ISO
+- [ ] Add band selector dropdown
+  - [ ] List all bands with frequency labels
+  - [ ] Show "No data" when no dataset loaded
 
-## 11) Testing & validation strategy
-
-### Unit tests (domain + codecs)
-- `mobRead` and `mobWrite` round-trip for fixtures.
-- Coverage computation tests with small datasets.
-- Normalization tests.
-
-### UI tests
-- Smoke tests:
-  - open file
-  - change band
-  - switch view
-
-### Performance checks
-- Measure time-to-first-render for:
-  - parsing `.mob`
-  - generating 3D mesh
-  - rendering ISO heatmap
-
-
-## 12) Milestones & deliverables
-
-### Milestone A — Skeleton app (1–2 days)
-- Vite/Bun/Tailwind scaffolding
-- App shell + routing (if needed)
-- Basic state store
-- Placeholder views
-
-Deliverable: runnable web app shell.
-
-### Milestone B — Core dataset + `.mob` read (3–6 days)
-- Implement RIFF reader
-- Parse `MOBA` header + `plev`
-- Load a `.mob` and show metadata + band list
-
-Deliverable: open `.mob` and inspect data.
-
-### Milestone C — 2D view + band switching (2–4 days)
-- Implement 2D canvas polar plot
-- Range/max/norm handling
-
-Deliverable: 2D view parity for typical datasets.
-
-### Milestone D — 3D balloon view (4–8 days)
-- Sphere mesh from dataset
-- Colormap mapping
-- Orbit controls + reset
-- Optional dots overlay
-
-Deliverable: interactive 3D visualization.
-
-### Milestone E — Coverage computation + overlays (2–5 days)
-- Port `CalcCoverage`
-- Coverage view + 3D overlay
-
-Deliverable: 3/6/9 dB coverage features.
-
-### Milestone F — ISO view (4–7 days)
-- Heatmap generation
-- Band range + max angle controls
-- Optional overlays
-
-Deliverable: ISO view parity.
-
-### Milestone G — Save/export (3–6 days)
-- `.mob` write (header + plev + selected optional chunks)
-- Export PNG
-- CSV export
-
-Deliverable: practical read/modify/save workflow.
-
-### Milestone H — Additional formats (ongoing)
-- CLF text first, then XHN/UNF/GDF
-- Add fixtures per format
-
-Deliverable: broader interoperability.
-
-### Milestone I — Import wizard (later)
-- Worker-based FFT/banding
-- UI workflow
-
-Deliverable: IR/audio import pipeline.
-
-
-## 13) Open questions / decisions to lock down early
-
-These affect implementation details; answer them before Milestone C/D:
-- Confirm whether datasets are always stored as absolute dB or relative values per format.
-- Confirm exact normalization behavior expected when “maximum is derived from norm angle”.
-- Confirm whether ISO view should support both “90° horiz / 0° vertical” presets exactly.
-- Decide whether POX export is required for v1; if yes, define expected output precisely.
-
-
-## 14) Risks & mitigations
-
-- **Web file access limitations**: browsers can’t freely access MRU paths.
-  - Mitigation: MRU becomes “recently opened names”, plus user-driven re-open.
-- **Performance on large datasets**:
-  - Mitigation: typed arrays, memoized derived results, offload to workers.
-- **Legacy formats are messy/variable**:
-  - Mitigation: tolerant parsing + good error messages + fixture corpus.
-- **3D parity differences** (GLScene immediate-mode vs modern WebGL):
-  - Mitigation: validate against visual snapshots and known datasets.
+### 5.3 View Container
+
+- [ ] Create `src/app/shell/ViewContainer.tsx`
+- [ ] Render correct view component based on `viewMode`
+- [ ] Show placeholder when no dataset loaded
+- [ ] Handle view transitions
+
+### 5.4 Band Selector Logic
+
+- [ ] Create `src/domain/terz.ts`
+- [ ] Implement `terzFrequency(index: number): number` (third-octave center frequencies)
+- [ ] Implement `formatFrequency(hz: number): string` (e.g., "1 kHz", "250 Hz")
+- [ ] Implement `getBandLabel(dataset: Dataset, bandIndex: number): string`
+
+---
+
+## Milestone 6: 2D Polar Plot View
+
+Implement the 2D polar plot visualization (simplest view to start).
+
+### 6.1 Polar Plot Canvas
+
+- [ ] Create `src/views/view2d/PolarPlot.tsx`
+- [ ] Set up Canvas element with proper sizing
+- [ ] Implement resize handling (responsive)
+
+### 6.2 Grid Rendering
+
+- [ ] Implement `drawPolarGrid(ctx, options)`
+  - [ ] Draw concentric circles at dB intervals (e.g., every 6 dB)
+  - [ ] Draw radial lines at angle intervals (e.g., every 30°)
+  - [ ] Draw axis labels (0°, 90°, 180°, 270°)
+  - [ ] Draw dB labels on circles
+
+### 6.3 Slice Rendering
+
+- [ ] Implement `drawSlice(ctx, data, color, options)`
+  - [ ] Convert polar data to Cartesian coordinates
+  - [ ] Draw polyline connecting all points
+  - [ ] Close the path for full 360° data
+- [ ] Draw horizontal slice (red) from `getHorizontalSlice()`
+- [ ] Draw vertical slice (blue) from `getVerticalSlice()`
+
+### 6.4 Normalization
+
+- [ ] Create `src/domain/normalize.ts`
+- [ ] Implement `computeMaximum(dataset, bandIndex): number`
+- [ ] Implement `computeMinimum(dataset, bandIndex): number`
+- [ ] Implement `normalizeValue(value, min, max, range): number`
+- [ ] Apply normalization before rendering
+
+### 6.5 2D View Options
+
+- [ ] Create `src/views/view2d/View2dOptions.tsx`
+- [ ] Toggle horizontal slice on/off
+- [ ] Toggle vertical slice on/off
+- [ ] Direction selector (Front/Back/Left/Right)
+- [ ] Range controls (max dB, range dB)
+
+### 6.6 Unit Tests for 2D Rendering
+
+- [ ] Test coordinate conversion
+- [ ] Test normalization math
+- [ ] Snapshot test for known dataset
+
+---
+
+## Milestone 7: Coverage Computation
+
+Implement the 3/6/9 dB coverage calculation used by multiple views.
+
+### 7.1 Coverage Algorithm
+
+- [ ] Create `src/domain/coverage.ts`
+- [ ] Define `CoverageResult` type:
+  - [ ] `thresholds: number[]` (e.g., [3, 6, 9])
+  - [ ] `indices: number[][][]` (threshold × band × azimuth → polar index)
+- [ ] Implement `calcCoverage(dataset: Dataset, thresholds: number[]): CoverageResult`
+  - [ ] For each band:
+    - [ ] For each azimuth:
+      - [ ] Find on-axis value (polar = 0)
+      - [ ] Walk outward in polar angle
+      - [ ] Find index where value drops below threshold
+  - [ ] Handle edge cases (never drops, drops immediately)
+
+### 7.2 Coverage Helpers
+
+- [ ] Implement `getCoverageAngle(result, threshold, band, azimuth): number`
+- [ ] Implement `getCoverageContour(result, threshold, band): {az: number, pol: number}[]`
+
+### 7.3 Unit Tests for Coverage
+
+- [ ] Create `src/domain/__tests__/coverage.test.ts`
+- [ ] Test with synthetic dataset (known falloff pattern)
+- [ ] Test edge cases (flat response, steep falloff)
+- [ ] Test all three threshold levels
+
+---
+
+## Milestone 8: Coverage View
+
+Implement the 2D coverage contour visualization.
+
+### 8.1 Coverage View Canvas
+
+- [ ] Create `src/views/viewCoverage/CoverageView.tsx`
+- [ ] Set up Canvas with square aspect ratio
+- [ ] Draw grid from -90° to +90° on both axes
+
+### 8.2 Contour Rendering
+
+- [ ] Implement `drawCoverageContour(ctx, contour, threshold, color)`
+  - [ ] Project (azimuth, polar) to (x, y) using trig
+  - [ ] Draw closed contour path
+  - [ ] Fill with semi-transparent color
+- [ ] Draw 3 dB contour (innermost)
+- [ ] Draw 6 dB contour (middle)
+- [ ] Draw 9 dB contour (outermost)
+
+### 8.3 Coverage View Options
+
+- [ ] Create `src/views/viewCoverage/CoverageOptions.tsx`
+- [ ] Toggle individual thresholds on/off
+- [ ] Color picker for each threshold
+- [ ] Opacity controls
+
+---
+
+## Milestone 9: 3D Balloon View
+
+Implement the interactive 3D sphere visualization.
+
+### 9.1 Three.js Setup
+
+- [ ] Install dependencies: `bun add three @react-three/fiber @react-three/drei`
+- [ ] Create `src/views/view3d/View3d.tsx`
+- [ ] Set up R3F Canvas with proper sizing
+- [ ] Add OrbitControls for camera interaction
+- [ ] Add ambient + directional lighting
+
+### 9.2 Sphere Mesh Generation
+
+- [ ] Create `src/views/view3d/BalloonMesh.tsx`
+- [ ] Generate sphere geometry from dataset dimensions
+  - [ ] Vertices at each (azimuth, polar) grid point
+  - [ ] Connect with triangular faces
+- [ ] Deform vertex positions based on sample values:
+  - [ ] `radius = baseRadius * clamp((value - min) / range, 0, maxScale)`
+- [ ] Update geometry when band changes
+
+### 9.3 Vertex Coloring
+
+- [ ] Create `src/domain/colormap.ts`
+- [ ] Implement `createColormap(name: 'rainbow' | 'thermal' | 'grayscale'): (t: number) => RGB`
+- [ ] Implement `sampleColormap(colormap, value, min, max): RGB`
+- [ ] Apply vertex colors to mesh based on sample values
+
+### 9.4 Dots Overlay
+
+- [ ] Create `src/views/view3d/DotsOverlay.tsx`
+- [ ] Render point cloud at vertex positions
+- [ ] Configurable dot size and color
+- [ ] Toggle on/off
+
+### 9.5 Coverage Overlay (3D)
+
+- [ ] Create `src/views/view3d/CoverageOverlay.tsx`
+- [ ] Render coverage contours as line loops on sphere surface
+- [ ] Use coverage computation from Milestone 7
+- [ ] Different colors for 3/6/9 dB
+
+### 9.6 3D View Options
+
+- [ ] Create `src/views/view3d/View3dOptions.tsx`
+- [ ] Toggle surface/wireframe
+- [ ] Toggle dots overlay
+- [ ] Toggle coverage overlays
+- [ ] Colormap selector
+- [ ] Range controls
+- [ ] Camera reset button
+
+### 9.7 Performance Optimization
+
+- [ ] Use BufferGeometry with typed arrays
+- [ ] Memoize geometry when only color changes
+- [ ] Consider LOD for large datasets
+
+---
+
+## Milestone 10: ISO View (Heatmap)
+
+Implement the frequency vs angle heatmap visualization.
+
+### 10.1 ISO View Canvas
+
+- [ ] Create `src/views/viewIso/IsoView.tsx`
+- [ ] Set up Canvas element
+- [ ] Define coordinate system:
+  - [ ] X axis: frequency band index
+  - [ ] Y axis: polar angle (0 at center, mirrored)
+
+### 10.2 Heatmap Rendering
+
+- [ ] Implement `renderHeatmap(ctx, dataset, band, azimuthIndex, options)`
+  - [ ] For each (band, angle) cell:
+    - [ ] Get sample value
+    - [ ] Map to color via colormap
+    - [ ] Fill cell rectangle
+- [ ] Support configurable band range (lower/upper limits)
+- [ ] Support configurable max angle
+
+### 10.3 Axis Labels
+
+- [ ] Draw frequency labels on X axis (at band positions)
+- [ ] Draw angle labels on Y axis (0° center, ±max° at edges)
+- [ ] Draw colorbar legend
+
+### 10.4 ISO Overlays
+
+- [ ] Implement polar arc overlay (lines at specific angles)
+- [ ] Implement coverage curve overlay (from coverage computation)
+- [ ] Toggle each overlay on/off
+
+### 10.5 Azimuth Slice Selection
+
+- [ ] Add azimuth angle selector (like legacy `fIsoAngle`)
+- [ ] Preset options: 0° (horizontal), 90° (vertical)
+- [ ] Update heatmap when azimuth changes
+
+### 10.6 ISO View Options
+
+- [ ] Create `src/views/viewIso/IsoOptions.tsx`
+- [ ] Band range slider (lower/upper)
+- [ ] Max angle slider
+- [ ] Azimuth selector
+- [ ] Overlay toggles
+- [ ] Colormap selector
+
+---
+
+## Milestone 11: Additional File Formats
+
+Add support for industry-standard polar data formats.
+
+### 11.1 CLF Text Format (`.txt` / `.tab`)
+
+- [ ] Create `src/codecs/clf/clfRead.ts`
+- [ ] Parse CLF header lines (metadata)
+- [ ] Parse data grid (whitespace-delimited values)
+- [ ] Handle sensitivity adjustments
+- [ ] Implement on-axis consistency check (warn if >2 dB variation)
+- [ ] Create `src/codecs/clf/clfWrite.ts`
+- [ ] Write CLF-compatible output
+
+### 11.2 XHN Format (EASE 3.0)
+
+- [ ] Create `src/codecs/xhn/xhnRead.ts`
+- [ ] Analyze legacy `LoadXHN` for format details
+- [ ] Parse header and data sections
+- [ ] Create `src/codecs/xhn/xhnWrite.ts`
+
+### 11.3 UNF Format
+
+- [ ] Create `src/codecs/unf/unfRead.ts`
+- [ ] Analyze legacy `LoadUNF` for format details
+- [ ] Create `src/codecs/unf/unfWrite.ts`
+
+### 11.4 GDF Format
+
+- [ ] Create `src/codecs/gdf/gdfRead.ts`
+- [ ] Analyze legacy `LoadGDF` for format details
+- [ ] Create `src/codecs/gdf/gdfWrite.ts`
+
+### 11.5 Format Detection
+
+- [ ] Create `src/codecs/detect.ts`
+- [ ] Implement `detectFormat(filename: string, buffer: ArrayBuffer): FormatType`
+- [ ] Check magic bytes where applicable
+- [ ] Fall back to extension
+
+### 11.6 Golden Test Fixtures
+
+- [ ] Collect sample files for each format from legacy app
+- [ ] Add to `fixtures/` directory
+- [ ] Write integration tests loading each fixture
+
+---
+
+## Milestone 12: Export Features
+
+Implement data and image export capabilities.
+
+### 12.1 PNG Export
+
+- [ ] Create `src/features/export/exportPng.ts`
+- [ ] Implement `exportViewAsPng(canvas: HTMLCanvasElement): Blob`
+- [ ] For 2D/Coverage/ISO: use canvas `toBlob()`
+- [ ] For 3D: capture from Three.js renderer
+- [ ] Add resolution options (1x, 2x, 300 DPI)
+- [ ] Trigger download with appropriate filename
+
+### 12.2 CSV Export
+
+- [ ] Create `src/features/export/exportCsv.ts`
+- [ ] Implement `exportDatasetAsCsv(dataset: Dataset): string`
+  - [ ] Header row with band frequencies
+  - [ ] One row per (azimuth, polar) combination
+  - [ ] Values in dB
+- [ ] Trigger download
+
+### 12.3 POX Export (if needed)
+
+- [ ] Analyze legacy POX format requirements
+- [ ] Implement if required for parity
+
+---
+
+## Milestone 13: Settings Persistence
+
+Replace legacy INI file with browser-based persistence.
+
+### 13.1 Settings Schema
+
+- [ ] Install zod: `bun add zod`
+- [ ] Create `src/storage/settingsSchema.ts`
+- [ ] Define schema for all persistent settings:
+  - [ ] View preferences (default view mode, range settings)
+  - [ ] 3D options (colormap, overlays, dot size)
+  - [ ] 2D options (slice visibility, direction)
+  - [ ] ISO options (band range, max angle)
+  - [ ] Coverage options (threshold colors, opacity)
+  - [ ] Window state (sidebar open/closed)
+- [ ] Add schema version for migrations
+
+### 13.2 Settings Store
+
+- [ ] Create `src/storage/settings.ts`
+- [ ] Implement `loadSettings(): Settings`
+  - [ ] Read from localStorage
+  - [ ] Validate with zod
+  - [ ] Apply defaults for missing fields
+  - [ ] Handle version migrations
+- [ ] Implement `saveSettings(settings: Settings)`
+- [ ] Implement `resetSettings()`
+
+### 13.3 Settings UI
+
+- [ ] Create `src/features/options/OptionsPanel.tsx`
+- [ ] Create `src/features/options/OptionsDialog.tsx`
+- [ ] Organize by category (view-specific, global)
+- [ ] Auto-save on change
+
+---
+
+## Milestone 14: Import Pipeline (Post-MVP)
+
+Implement the IR/audio measurement import wizard.
+
+### 14.1 File Selection
+
+- [ ] Create `src/features/import/ImportWizard.tsx`
+- [ ] Directory selection (File System Access API where supported)
+- [ ] Multi-file drag-drop fallback
+- [ ] File list display with detected angles
+
+### 14.2 Filename Pattern Detection
+
+- [ ] Create `src/features/import/patternDetect.ts`
+- [ ] Detect `IR*` naming patterns
+- [ ] Detect `H???V???` / `V???H???` patterns
+- [ ] Infer azimuth/polar angles from filenames
+- [ ] Infer sphere symmetry (full/half/quarter)
+- [ ] Display detected configuration for user confirmation
+
+### 14.3 Audio Decoding
+
+- [ ] Create `src/workers/audioDecoder.ts`
+- [ ] Use Web Audio API `decodeAudioData()`
+- [ ] Support WAV, AIFF, AU formats
+- [ ] Extract sample data as Float32Array
+- [ ] Handle stereo (select channel)
+
+### 14.4 FFT Processing
+
+- [ ] Create `src/workers/fftWorker.ts`
+- [ ] Evaluate FFT library (e.g., `fft.js`, consider WASM for performance)
+- [ ] Compute magnitude spectrum
+- [ ] Implement band integration:
+  - [ ] 1/3 octave bands
+  - [ ] 1/4, 1/10, 1/12, 1/24 octave options
+- [ ] Return banded magnitude values
+
+### 14.5 Dataset Assembly
+
+- [ ] Combine processed files into Dataset structure
+- [ ] Perform on-axis consistency check
+  - [ ] Warn if variation > 2 dB
+  - [ ] Offer to normalize to average
+- [ ] Populate metadata
+
+### 14.6 Import Worker Orchestration
+
+- [ ] Create main import worker that coordinates:
+  - [ ] File reading
+  - [ ] Audio decoding
+  - [ ] FFT processing
+  - [ ] Progress reporting
+- [ ] Show progress bar in UI
+- [ ] Support cancellation
+
+---
+
+## Milestone 15: Error Handling & Logging
+
+Implement the error log panel (like legacy `MBErrors`).
+
+### 15.1 Error Store
+
+- [ ] Create `src/store/errorStore.ts`
+- [ ] Define `LogEntry` type: `{ level: 'info' | 'warn' | 'error', message: string, timestamp: Date }`
+- [ ] Implement `addLog(entry: LogEntry)`
+- [ ] Implement `clearLog()`
+- [ ] Implement `getErrors(): LogEntry[]`
+
+### 15.2 Error Panel UI
+
+- [ ] Create `src/features/errors/ErrorPanel.tsx`
+- [ ] Show collapsible panel in app shell
+- [ ] List all log entries with icons by level
+- [ ] Clear button
+- [ ] Show count badge when minimized
+
+### 15.3 Integration
+
+- [ ] Log parsing warnings from codecs
+- [ ] Log import issues (on-axis check failures)
+- [ ] Log file save errors
+- [ ] Log WebGL capability issues
+
+---
+
+## Milestone 16: Speaker Info Panel
+
+Implement the metadata display/edit panel (like legacy `MBInfo`).
+
+### 16.1 Info Panel UI
+
+- [ ] Create `src/features/info/InfoPanel.tsx`
+- [ ] Display dataset metadata:
+  - [ ] Speaker name
+  - [ ] Manufacturer
+  - [ ] Date
+  - [ ] Notes
+- [ ] Display dataset statistics:
+  - [ ] Axis dimensions
+  - [ ] Frequency range
+  - [ ] Sphere mode
+
+### 16.2 Metadata Editing
+
+- [ ] Make metadata fields editable
+- [ ] Update dataset in store on edit
+- [ ] Mark file as dirty
+
+---
+
+## Milestone 17: Testing & Validation
+
+Comprehensive testing against legacy application.
+
+### 17.1 Visual Regression Tests
+
+- [ ] Set up visual regression testing (e.g., Playwright)
+- [ ] Capture screenshots of all view modes
+- [ ] Compare against reference images from legacy app
+
+### 17.2 Data Accuracy Tests
+
+- [ ] Load same `.mob` file in legacy and web app
+- [ ] Export data from both
+- [ ] Compare numerically (values should match exactly)
+
+### 17.3 Performance Benchmarks
+
+- [ ] Measure `.mob` parse time
+- [ ] Measure 3D mesh generation time
+- [ ] Measure ISO heatmap render time
+- [ ] Set performance budgets
+
+### 17.4 Browser Compatibility
+
+- [ ] Test in Chrome, Firefox, Safari, Edge
+- [ ] Test on mobile (touch controls for 3D)
+- [ ] Document any browser-specific limitations
+
+---
+
+## Milestone 18: Polish & Documentation
+
+Final polish for release.
+
+### 18.1 Keyboard Shortcuts
+
+- [ ] Band navigation (arrow keys)
+- [ ] View switching (1-4 keys)
+- [ ] File operations (Ctrl+O, Ctrl+S)
+
+### 18.2 Responsive Layout
+
+- [ ] Test on various screen sizes
+- [ ] Collapsible sidebar on small screens
+- [ ] Touch-friendly controls
+
+### 18.3 Loading States
+
+- [ ] Show skeleton/spinner during file load
+- [ ] Show progress for large operations
+- [ ] Graceful error states
+
+### 18.4 User Documentation
+
+- [ ] Create help overlay / tour
+- [ ] Document file format compatibility
+- [ ] Document keyboard shortcuts
+
+---
+
+## Open Questions
+
+Resolve before starting related milestones:
+
+- [ ] Confirm exact normalization behavior ("maximum derived from norm angle")
+- [ ] Confirm ISO view preset requirements (90° horiz / 0° vertical)
+- [ ] Confirm whether POX export is required for v1
+- [ ] Determine if spectrum viewer is required for MVP

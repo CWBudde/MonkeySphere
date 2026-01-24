@@ -307,7 +307,7 @@ Based on units and APIs used:
   - rendering
   - parsing/writing multiple formats
   - UI state and actions
-  This is functional but makes a direct port harder; a React rewrite should separate data/model, IO codecs, and rendering.
+    This is functional but makes a direct port harder; a React rewrite should separate data/model, IO codecs, and rendering.
 
 - **Loader thread is mostly synchronous**: `TLoadFile` exists but performs work via `Synchronize`, so parsing still happens on the UI thread.
 

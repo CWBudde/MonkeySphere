@@ -1,0 +1,27 @@
+node_modules
+.dist
+/dist
+.vite
+coverage
+
+# Legacy Delphi source
+legacy
+
+# Build artifacts
+*.min.*
+
+# Lockfiles
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Binary-ish
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.zip

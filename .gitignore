@@ -1,0 +1,20 @@
+# Web app
+node_modules/
+dist/
+.vite/
+
+# Bun
+**/bun.lockb
+
+# Logs
+**/*.log
+
+# OS/editor
+.DS_Store
+.vscode/
+
+# AI Agents
+.claude/
+
+# Legacy
+legacy/
