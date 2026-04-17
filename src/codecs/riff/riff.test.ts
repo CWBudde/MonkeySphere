@@ -201,8 +201,8 @@ describe("RIFF Writer", () => {
 
   it("validates FourCC values", () => {
     expect(() => createRiffFile("TOO", [])).toThrow(RiffWriterError);
-    expect(() =>
-      createRiffFile("TEST", [{ id: "bad\x01", data: new Uint8Array() }]),
-    ).toThrow(RiffWriterError);
+    expect(() => createRiffFile("TEST", [{ id: "bad\x01", data: new Uint8Array() }])).toThrow(
+      RiffWriterError,
+    );
   });
 });

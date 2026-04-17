@@ -5,6 +5,7 @@ import type { Dataset } from "../../domain/dataset/types";
 import { getSample } from "../../domain/dataset/dataset";
 import { createColormap, sampleColormap } from "../../domain/colormap";
 import { computeMaximum, computeMinimum } from "../../domain/normalize";
+import { createAzimuthSampling } from "./azimuthSampling";
 
 type BalloonMeshProps = {
   dataset: Dataset;
@@ -25,7 +26,8 @@ export function BalloonMesh({
   heightScale,
 }: BalloonMeshProps) {
   const geometry = useMemo(() => {
-    const azCount = dataset.azimuth.count;
+    const sampling = createAzimuthSampling(dataset);
+    const azCount = sampling.angles.length;
     const polCount = dataset.polar.count;
 
     const vertexCount = azCount * polCount;
@@ -38,15 +40,14 @@ export function BalloonMesh({
     const scaleFactor = 1 + (MAX_SCALE - 1) * Math.max(0, heightScale);
     const mapSample = createColormap(colormap);
 
-    const azStart = dataset.azimuth.startDeg;
-    const azStep = dataset.azimuth.stepDeg;
     const polStart = dataset.polar.startDeg;
     const polStep = dataset.polar.stepDeg;
 
     let vertexIndex = 0;
     let colorIndex = 0;
     for (let az = 0; az < azCount; az++) {
-      const azDeg = azStart + az * azStep;
+      const azDeg = sampling.angles[az];
+      const azIndex = sampling.mapAngleToIndex(azDeg);
       const azRad = (azDeg * Math.PI) / 180;
       const cosAz = Math.cos(azRad);
       const sinAz = Math.sin(azRad);
@@ -57,7 +58,7 @@ export function BalloonMesh({
         const sinPol = Math.sin(polRad);
         const cosPol = Math.cos(polRad);
 
-        const sample = getSample(dataset, az, pol, bandIndex);
+        const sample = getSample(dataset, azIndex, pol, bandIndex);
         const normalized = range > 0 ? (sample - minDb) / range : 0;
         const scaled = Math.min(Math.max(normalized, 0), 1) * (scaleFactor - 1) + 1;
         const radius = BASE_RADIUS * scaled;
@@ -74,9 +75,7 @@ export function BalloonMesh({
     }
 
     const indices: number[] = [];
-    const azSpan = azStep * (azCount - 1);
-    const wrapAz =
-      dataset.sphereMode === "full" && azCount > 2 && azSpan >= 360 - azStep * 0.5;
+    const wrapAz = sampling.wrap && azCount > 2;
 
     const addQuad = (azA: number, azB: number) => {
       for (let pol = 0; pol < polCount - 1; pol++) {

@@ -416,20 +416,20 @@ Implement the interactive 3D sphere visualization.
 
 ### 9.5 Coverage Overlay (3D)
 
-- [ ] Create `src/views/view3d/CoverageOverlay.tsx`
-- [ ] Render coverage contours as line loops on sphere surface
-- [ ] Use coverage computation from Milestone 7
-- [ ] Different colors for 3/6/9 dB
+- [x] Create `src/views/view3d/CoverageOverlay.tsx`
+- [x] Render coverage contours as line loops on sphere surface
+- [x] Use coverage computation from Milestone 7
+- [x] Different colors for 3/6/9 dB
 
 ### 9.6 3D View Options
 
-- [ ] Create `src/views/view3d/View3dOptions.tsx`
-- [ ] Toggle surface/wireframe
-- [ ] Toggle dots overlay
-- [ ] Toggle coverage overlays
-- [ ] Colormap selector
-- [ ] Range controls
-- [ ] Camera reset button
+- [x] Create `src/views/view3d/View3dOptions.tsx`
+- [x] Toggle surface/wireframe
+- [x] Toggle dots overlay
+- [x] Toggle coverage overlays
+- [x] Colormap selector
+- [x] Range controls
+- [x] Camera reset button
 
 ### 9.7 Performance Optimization
 

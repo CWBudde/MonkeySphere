@@ -1,3 +1,4 @@
+import { thirdOctaveFrequency, thirdOctaveIndex } from "../utils/thirdOctave";
 import type { Dataset } from "./dataset/types";
 import { getFrequencyAtBand } from "./dataset/types";
 
@@ -18,5 +19,6 @@ export function formatFrequency(hz: number): string {
 
 export function getBandLabel(dataset: Dataset, bandIndex: number): string {
   const frequency = getFrequencyAtBand(dataset.freq, bandIndex);
-  return formatFrequency(frequency);
+  const snapped = thirdOctaveFrequency(thirdOctaveIndex(frequency));
+  return formatFrequency(snapped);
 }

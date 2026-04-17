@@ -4,6 +4,7 @@ import * as THREE from "three";
 import type { Dataset } from "../../domain/dataset/types";
 import { getSample } from "../../domain/dataset/dataset";
 import { computeMaximum, computeMinimum } from "../../domain/normalize";
+import { createAzimuthSampling } from "./azimuthSampling";
 
 type DotsOverlayProps = {
   dataset: Dataset;
@@ -24,7 +25,8 @@ export function DotsOverlay({
   heightScale,
 }: DotsOverlayProps) {
   const geometry = useMemo(() => {
-    const azCount = dataset.azimuth.count;
+    const sampling = createAzimuthSampling(dataset);
+    const azCount = sampling.angles.length;
     const polCount = dataset.polar.count;
     const vertexCount = azCount * polCount;
     const positions = new Float32Array(vertexCount * 3);
@@ -34,14 +36,13 @@ export function DotsOverlay({
     const range = maxDb - minDb;
     const scaleFactor = 1 + (MAX_SCALE - 1) * Math.max(0, heightScale);
 
-    const azStart = dataset.azimuth.startDeg;
-    const azStep = dataset.azimuth.stepDeg;
     const polStart = dataset.polar.startDeg;
     const polStep = dataset.polar.stepDeg;
 
     let index = 0;
     for (let az = 0; az < azCount; az++) {
-      const azDeg = azStart + az * azStep;
+      const azDeg = sampling.angles[az];
+      const azIndex = sampling.mapAngleToIndex(azDeg);
       const azRad = (azDeg * Math.PI) / 180;
       const cosAz = Math.cos(azRad);
       const sinAz = Math.sin(azRad);
@@ -52,7 +53,7 @@ export function DotsOverlay({
         const sinPol = Math.sin(polRad);
         const cosPol = Math.cos(polRad);
 
-        const sample = getSample(dataset, az, pol, bandIndex);
+        const sample = getSample(dataset, azIndex, pol, bandIndex);
         const normalized = range > 0 ? (sample - minDb) / range : 0;
         const scaled = Math.min(Math.max(normalized, 0), 1) * (scaleFactor - 1) + 1;
         const radius = BASE_RADIUS * scaled;
